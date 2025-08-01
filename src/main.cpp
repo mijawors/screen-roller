@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <IRremote.h>
+#include <IRremote.hpp>
 #include <Preferences.h>
 #include <esp_sleep.h>
 
@@ -20,7 +20,7 @@ unsigned long lastIrActivity = 0;
 void goToSleep() {
   delay(100);
   IrReceiver.end(); // stop IR
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0); // LOW on GPIO13 will wake up
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0); // LOW on GPIO33 will wake up
   Serial.println("Going to sleep... press a button on the remote (e.g., *)");
   delay(100);  // important to allow UART to send the message
   digitalWrite(Pins::LED, LOW);
@@ -53,6 +53,7 @@ void setup() {
     Serial.println("📡 Woken up by IR – 15 seconds to confirm with `*`...");
     delay(300);  // allow signal to settle
     IrReceiver.begin(Pins::IR_RECEIVE, ENABLE_LED_FEEDBACK);
+    delay(200);  // allow IR receiver to stabilize
 
     unsigned long startTime = millis();
     bool confirmed = false;
@@ -66,7 +67,7 @@ void setup() {
 
         IrReceiver.resume();
 
-        if (code == 0x16) {  // * button
+        if (code != 0x0 && code == 0x16) {  // * button
           Serial.println("✅ Confirmed with `*` button. Starting...");
           confirmed = true;
           digitalWrite(Pins::LED, HIGH);
