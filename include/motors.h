@@ -1,5 +1,4 @@
-#ifndef MOTORS_H
-#define MOTORS_H
+#pragma once
 
 void motorsSetup();
 
@@ -12,5 +11,3 @@ void releaseMotor();
 void makeSecondMotorRotation();
 void makeSecondMotorRotationBackward();
 void releaseMotor2();
-
-#endif

@@ -1,7 +1,6 @@
-#ifndef SECRETS_H
-#define SECRETS_H
+#pragma once
 
-#define WIFI_SSID "SSID"
-#define WIFI_PASSWORD "PASSWORD"
-
-#endif
+namespace Secrets {
+    inline constexpr const char* WIFI_SSID = "SSID";
+    inline constexpr const char* WIFI_PASSWORD = "PASSWORD";
+}

@@ -5,12 +5,15 @@
 #include <motors.h>
 #include <ir_handler.h>
 
-static Preferences prefs;
-static bool isExtended = false;
+namespace {
+  Preferences prefs;
+  bool isExtended = false;
+}
+
 extern unsigned long lastIrActivity;
 
 void initIrHandler() {
-  prefs.begin("motorState", false);
+  prefs.begin("motorState", true);
   isExtended = prefs.getBool("extended", false);
   prefs.end();
 }
@@ -25,6 +28,48 @@ void setIsExtended(bool state) {
 
 void goToSleep();
 
+void extendArm() {
+  Serial.println("⚙️ Extending...");
+  makeSecondMotorRotation();
+  releaseMotor2();
+
+  delay(2000);
+  for (int i = 0; i < 2; i++) makeOneRotation();
+  releaseMotor();
+
+  delay(2000);
+  makeSecondMotorRotationBackward();
+  releaseMotor2();
+
+  isExtended = true;
+  Serial.println("✅ Extended. Saving state...");
+
+  prefs.begin("motorState", false);
+  prefs.putBool("extended", true);
+  prefs.end();
+}
+
+void retractArm() {
+  Serial.println("⚙️ Retracting...");
+  makeSecondMotorRotationBackward();
+  releaseMotor2();
+
+  delay(2000);
+  for (int i = 0; i < 2; i++) makeOneRotationBackward();
+  releaseMotor();
+
+  delay(2000);
+  makeSecondMotorRotation();
+  releaseMotor2();
+
+  isExtended = false;
+  Serial.println("✅ Retracted. Saving state...");
+
+  prefs.begin("motorState", false);
+  prefs.putBool("extended", false);
+  prefs.end();
+}
+
 void handleIrCommand(uint8_t code) {
   lastIrActivity = millis();
 
@@ -36,40 +81,10 @@ void handleIrCommand(uint8_t code) {
 
     case 0x45:  // '1'
       if (!isExtended) {
-        Serial.println("⚙️ Extending...");
-        makeSecondMotorRotation();
-        releaseMotor2();
-
-        delay(2000);
-        for (int i = 0; i < 2; i++) makeOneRotation();
-        releaseMotor();
-
-        delay(2000);
-        makeSecondMotorRotationBackward();
-        releaseMotor2();
-
-        isExtended = true;
-        Serial.println("✅ Extended. Saving state...");
+        extendArm();
       } else {
-        Serial.println("⚙️ Retracting...");
-        makeSecondMotorRotationBackward();
-        releaseMotor2();
-
-        delay(2000);
-        for (int i = 0; i < 2; i++) makeOneRotationBackward();
-        releaseMotor();
-
-        delay(2000);
-        makeSecondMotorRotation();
-        releaseMotor2();
-
-        isExtended = false;
-        Serial.println("✅ Retracted. Saving state...");
+        retractArm();
       }
-
-      prefs.begin("motorState", false);
-      prefs.putBool("extended", isExtended);
-      prefs.end();
       break;
 
     case 0x18:  // ▼

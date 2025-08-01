@@ -1,7 +1,4 @@
-#ifndef WIFI_OTA_H
-#define WIFI_OTA_H
+#pragma once
 
 void setupWiFiAndOTA();
 void handleOTA();
-
-#endif

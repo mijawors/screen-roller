@@ -1,24 +1,30 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
 #include <secrets.h>
 
-// ---------------------- Motor pins ------------------------
-#define IN1 16
-#define IN2 17
-#define IN3 18
-#define IN4 19
+namespace Config {
+  inline namespace V1 {
 
-#define IN5 12
-#define IN6 14
-#define IN7 27
-#define IN8 26
+    struct MotorPins {
+      static constexpr int IN1 = 16;
+      static constexpr int IN2 = 17;
+      static constexpr int IN3 = 18;
+      static constexpr int IN4 = 19;
 
-// ---------------------- Other pins ------------------------
-#define IR_RECEIVE_PIN 13
-#define LED_PIN 25
+      static constexpr int IN5 = 12;
+      static constexpr int IN6 = 14;
+      static constexpr int IN7 = 27;
+      static constexpr int IN8 = 26;
+    };
 
-// ---------------------- Inactivity timeout ----------------
-#define INACTIVITY_TIMEOUT 60000
+    struct Pins {
+      static constexpr int IR_RECEIVE = 13;
+      static constexpr int LED = 25;
+    };
 
-#endif
+    struct Timeouts {
+      static constexpr unsigned long INACTIVITY_TIMEOUT = 60000;
+    };
+
+  }
+}

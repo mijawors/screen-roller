@@ -5,6 +5,8 @@
 #include <ota_handler.h>
 #include <config.h>
 
+using namespace Secrets;
+
 void setupWiFiAndOTA() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
