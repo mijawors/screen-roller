@@ -12,6 +12,8 @@ namespace {
 
 extern unsigned long lastIrActivity;
 
+void goToSleep();
+
 void initIrHandler() {
   prefs.begin("motorState", true);
   isExtended = prefs.getBool("extended", false);
@@ -26,20 +28,19 @@ void setIsExtended(bool state) {
   isExtended = state;
 }
 
-void goToSleep();
-
 void extendArm() {
   Serial.println("⚙️ Extending...");
-  makeSecondMotorRotation();
-  releaseMotor2();
+
+  motor2.rotate();
+  motor2.release();
 
   delay(2000);
-  for (int i = 0; i < 2; i++) makeOneRotation();
-  releaseMotor();
+  for (int i = 0; i < 2; i++) motor1.rotate();
+  motor1.release();
 
   delay(2000);
-  makeSecondMotorRotationBackward();
-  releaseMotor2();
+  motor2.rotateBackward();
+  motor2.release();
 
   isExtended = true;
   Serial.println("✅ Extended. Saving state...");
@@ -51,16 +52,17 @@ void extendArm() {
 
 void retractArm() {
   Serial.println("⚙️ Retracting...");
-  makeSecondMotorRotationBackward();
-  releaseMotor2();
+
+  motor2.rotateBackward();
+  motor2.release();
 
   delay(2000);
-  for (int i = 0; i < 2; i++) makeOneRotationBackward();
-  releaseMotor();
+  for (int i = 0; i < 2; i++) motor1.rotateBackward();
+  motor1.release();
 
   delay(2000);
-  makeSecondMotorRotation();
-  releaseMotor2();
+  motor2.rotate();
+  motor2.release();
 
   isExtended = false;
   Serial.println("✅ Retracted. Saving state...");
@@ -89,14 +91,14 @@ void handleIrCommand(uint8_t code) {
 
     case 0x18:  // ▼
       Serial.println("⛔ Emergency retracting...");
-      makeOneStepBackward();
-      releaseMotor();
+      motor1.stepBackward();
+      motor1.release();
       break;
 
     case 0x52:  // ▲
       Serial.println("⛔ Emergency extending...");
-      makeOneStep();
-      releaseMotor();
+      motor1.stepForward();
+      motor1.release();
       break;
 
     default:
