@@ -1,8 +1,6 @@
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
 
-void handleIrCommand(uint8_t code);
-void setIsExtended(bool state);
-bool getIsExtended();
 void initIrHandler();
+void handleIrCommand(uint8_t code);
