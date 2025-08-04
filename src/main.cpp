@@ -10,88 +10,82 @@
 
 using namespace Config::V1;
 
-Preferences prefs;
-bool isExtended = false;
-
 unsigned long lastIrActivity = 0;
 
-// ---------------- SLEEP MODE ---------------------
+// ---------------- HELPERS ---------------------
 
 void goToSleep() {
   delay(100);
-  IrReceiver.end(); // stop IR
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0); // LOW on GPIO33 will wake up
+  IrReceiver.end();
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0); // IR pin LOW
   Serial.println("Going to sleep... press a button on the remote (e.g., *)");
-  delay(100);  // important to allow UART to send the message
+  delay(100);
   digitalWrite(Pins::LED, LOW);
   esp_deep_sleep_start();
 }
 
-// ---------------- SETUP -------------------
-
-void setup() {
-  Serial.begin(115200);
-  delay(100);  // important – give USB/UART time to initialize
-
-  setupWiFiAndOTA();
-
-  motorsSetup();
-  initIrHandler();
-
+void initHardware() {
   pinMode(Pins::LED, OUTPUT);
   digitalWrite(Pins::LED, LOW);
-
   IrReceiver.begin(Pins::IR_RECEIVE, ENABLE_LED_FEEDBACK);
+  motorsSetup();
+  initIrHandler();
+}
 
-  prefs.begin("motorState", true);
-  isExtended = prefs.getBool("extended", false);
-  prefs.end();
+bool confirmWakeupWithIR() {
+  Serial.println("📡 Woken up by IR – 15 seconds to confirm with `*`...");
+  delay(300);
+  IrReceiver.begin(Pins::IR_RECEIVE, ENABLE_LED_FEEDBACK);
+  delay(200);
 
-  esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
+  unsigned long start = millis();
+  while (millis() - start < 15000) {
+    digitalWrite(Pins::LED, millis() % 500 < 250 ? HIGH : LOW);
+    if (IrReceiver.decode()) {
+      uint8_t code = IrReceiver.decodedIRData.command;
+      Serial.printf("➡️ IR code: 0x%X\n", code);
+      IrReceiver.resume();
 
-  if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
-    Serial.println("📡 Woken up by IR – 15 seconds to confirm with `*`...");
-    delay(300);  // allow signal to settle
-    IrReceiver.begin(Pins::IR_RECEIVE, ENABLE_LED_FEEDBACK);
-    delay(200);  // allow IR receiver to stabilize
-
-    unsigned long startTime = millis();
-    bool confirmed = false;
-
-    while (millis() - startTime < 15000) { // 15 seconds to confirm
-      digitalWrite(Pins::LED, millis() % 500 < 250 ? HIGH : LOW);
-      if (IrReceiver.decode()) {
-        unsigned long code = IrReceiver.decodedIRData.command;
-        Serial.print("➡️ IR code: 0x");
-        Serial.println(code, HEX);
-
-        IrReceiver.resume();
-
-        if (code != 0x0 && code == 0x16) {  // * button
-          Serial.println("✅ Confirmed with `*` button. Starting...");
-          confirmed = true;
-          digitalWrite(Pins::LED, HIGH);
-          lastIrActivity = millis();
-          break;
-        }
+      if (code == 0x16) { // '*' button
+        Serial.println("✅ Confirmed with `*` button. Starting...");
+        digitalWrite(Pins::LED, HIGH);
+        lastIrActivity = millis();
+        return true;
       }
-
-      delay(10); // small delay to prevent CPU overuse
     }
+    delay(10);
+  }
 
-    if (!confirmed) {
+  return false;
+}
+
+void handleWakeup() {
+  auto reason = esp_sleep_get_wakeup_cause();
+
+  if (reason == ESP_SLEEP_WAKEUP_EXT0) {
+    if (!confirmWakeupWithIR()) {
       Serial.println("⏳ No confirmation – going back to sleep.");
       digitalWrite(Pins::LED, LOW);
       goToSleep();
     } else {
       Serial.println("⏳ Waiting for command...");
     }
-
   } else {
     Serial.println("😴 Cold boot – going to sleep...");
     digitalWrite(Pins::LED, LOW);
     goToSleep();
   }
+}
+
+// ---------------- SETUP ---------------------
+
+void setup() {
+  Serial.begin(115200);
+  delay(100);
+
+  setupWiFiAndOTA();
+  initHardware();
+  handleWakeup();
 }
 
 // ---------------- LOOP ---------------------
@@ -104,7 +98,6 @@ void loop() {
     IrReceiver.resume();
   }
 
-  // If no IR activity for X milliseconds – go to sleep
   if (millis() - lastIrActivity > Timeouts::INACTIVITY_TIMEOUT) {
     Serial.println("⏲️ No activity – entering sleep mode automatically.");
     goToSleep();
