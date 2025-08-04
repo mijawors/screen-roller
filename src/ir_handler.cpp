@@ -3,6 +3,7 @@
 #include <config.h>
 #include <screen_controller.h>
 #include <ir_handler.h>
+#include <power_handler.h>
 
 using namespace Config::V1;
 
@@ -21,7 +22,7 @@ void irHandlerLoop() {
 }
 
 void prepareIrForSleep() {
-  IrReceiver.end();  // wywoływane przed deep sleep
+  IrReceiver.end();
 }
 
 bool confirmWakeupWithIR() {
@@ -41,7 +42,7 @@ bool confirmWakeupWithIR() {
       if (code == 0x16) { // '*' button
         Serial.println("✅ Confirmed with `*` button. Starting...");
         digitalWrite(Pins::LED, HIGH);
-        lastIrActivity = millis();
+        updateActivity();
         return true;
       }
     }
@@ -52,7 +53,7 @@ bool confirmWakeupWithIR() {
 }
 
 void handleIrCommand(uint8_t code) {
-  lastIrActivity = millis();
+  updateActivity();
 
   switch (code) {
     case 0x16:  // '*'
