@@ -1,6 +1,7 @@
 #pragma once
 
-#include <stdint.h>
-
-void initIrHandler();
+void irHandlerInit();
+void irHandlerLoop();
 void handleIrCommand(uint8_t code);
+bool confirmWakeupWithIR();
+void prepareIrForSleep();

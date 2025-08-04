@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <IRremote.hpp>
 #include <Preferences.h>
 #include <esp_sleep.h>
 
@@ -16,8 +15,8 @@ unsigned long lastIrActivity = 0;
 
 void goToSleep() {
   delay(100);
-  IrReceiver.end();
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0); // IR pin LOW
+  prepareIrForSleep();  // <-- z ir_handler.h
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 0);
   Serial.println("Going to sleep... press a button on the remote (e.g., *)");
   delay(100);
   digitalWrite(Pins::LED, LOW);
@@ -27,36 +26,8 @@ void goToSleep() {
 void initHardware() {
   pinMode(Pins::LED, OUTPUT);
   digitalWrite(Pins::LED, LOW);
-  IrReceiver.begin(Pins::IR_RECEIVE, ENABLE_LED_FEEDBACK);
   motorsSetup();
-  initIrHandler();
-}
-
-bool confirmWakeupWithIR() {
-  Serial.println("📡 Woken up by IR – 15 seconds to confirm with `*`...");
-  delay(300);
-  IrReceiver.begin(Pins::IR_RECEIVE, ENABLE_LED_FEEDBACK);
-  delay(200);
-
-  unsigned long start = millis();
-  while (millis() - start < 15000) {
-    digitalWrite(Pins::LED, millis() % 500 < 250 ? HIGH : LOW);
-    if (IrReceiver.decode()) {
-      uint8_t code = IrReceiver.decodedIRData.command;
-      Serial.printf("➡️ IR code: 0x%X\n", code);
-      IrReceiver.resume();
-
-      if (code == 0x16) { // '*' button
-        Serial.println("✅ Confirmed with `*` button. Starting...");
-        digitalWrite(Pins::LED, HIGH);
-        lastIrActivity = millis();
-        return true;
-      }
-    }
-    delay(10);
-  }
-
-  return false;
+  irHandlerInit();  // zamiast IrReceiver.begin()
 }
 
 void handleWakeup() {
@@ -92,12 +63,7 @@ void setup() {
 
 void loop() {
   handleOTA();
-
-  if (IrReceiver.decode()) {
-    handleIrCommand(IrReceiver.decodedIRData.command);
-    IrReceiver.resume();
-  }
-
+  irHandlerLoop();  // <-- nowy
   if (millis() - lastIrActivity > Timeouts::INACTIVITY_TIMEOUT) {
     Serial.println("⏲️ No activity – entering sleep mode automatically.");
     goToSleep();
